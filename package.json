@@ -10,7 +10,8 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:revature-style-guide.helloWorld"
+        "onCommand:revature-style-guide.helloWorld",
+		"onLanguage:markdown"
 	],
 	"main": "./extension.js",
 	"contributes": {

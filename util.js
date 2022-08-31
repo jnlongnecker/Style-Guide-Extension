@@ -1,4 +1,4 @@
-const { isNamedExportBindings } = require('typescript');
+const { start } = require('repl');
 const vscode = require('vscode');
 const fs = vscode.workspace.fs;
 const root = vscode.workspace.workspaceFolders[0].uri.path;
@@ -9,6 +9,9 @@ let rules = vscode.workspace.getConfiguration('rules');
 let preambles = rules.get('preambles');
 let fileContents = rules.get('files');
 let styles = rules.get('style');
+
+let restructuringModules = false;
+let restructuringTopics = false;
 
 let context = {
     topicName: '',
@@ -68,21 +71,73 @@ const askChoice = async (question, choices, chooseMany = false) => {
 }
 
 /**
+ * 
+ * @param {vscode.Uri} changedTopicUri 
+ */
+const updateTopicNumbers = async (changedTopicUri) => {
+
+    if (restructuringTopics) return;
+
+    restructuringTopics = true;
+
+    let topicPath = changedTopicUri.path;
+    let changedTopicModulePath = topicPath.substring(0, topicPath.lastIndexOf('/'));
+    let moduleUri = vscode.Uri.file(changedTopicModulePath);
+
+    await updateNumbersInDirectory(moduleUri);
+
+    restructuringTopics = false;
+}
+
+/**
  * Updates all the module numbers to accommodate the changed module
  */
 const updateModuleNumbers = async () => {
-    console.log('Restructure needed!');
+
+    restructuringModules = true;
+
+    let moduleUri = vscode.Uri.file(root + '\\modules');
+    clearModuleMap();
+    await updateNumbersInDirectory(moduleUri);
+    await buildModuleMap();
+
+    restructuringModules = false;
 }
 
-const moduleChanged = changedUri => {
+const updateNumbersInDirectory = async (directoryUri) => {
+    let files = await fs.readDirectory(directoryUri);
+    let count = 0;
+    for (let file of files) {
+        let fileName = file[0];
+        if (!startsWithNumber(fileName)) continue;
+        count++;
+        let newName = convertHumanReadableToName(titleCapitalize(convertNameToHumanReadable(fileName)));
+        newName = ensureModuleOrTopicNumber(newName.substring(newName.indexOf('-') + 1), count);
+        await fs.rename(vscode.Uri.file(directoryUri.path + '\\' + fileName), vscode.Uri.file(directoryUri.path + '\\' + newName));
+    }
+}
+
+/**
+ * Responds to a change in the modules directory
+ * @param {vscode.Uri} changedUri 
+ * @returns 
+ */
+const moduleChanged = async changedUri => {
+    if (restructuringModules) return;
     let changedModuleName = changedUri.path.substring(changedUri.path.lastIndexOf('/') + 1);
     let moduleNumber = Number.parseInt(changedModuleName.substring(0, 3));
     if (!restructureNeeded(moduleNumber)) return;
 
-    updateModuleNumbers();
+    await updateModuleNumbers();
 }
 
+/**
+ * Responds to a new addition to the modules directory
+ * @param {vscode.Uri} changedUri 
+ * @returns 
+ */
 const moduleAdded = async changedUri => {
+    if (restructuringModules) return;
     let changedModuleName = changedUri.path.substring(changedUri.path.lastIndexOf('/') + 1);
     let moduleNumber = Number.parseInt(changedModuleName.substring(0, 3));
 
@@ -97,10 +152,16 @@ const moduleAdded = async changedUri => {
 
     if (!restructureNeeded(moduleNumber)) return;
 
-    updateModuleNumbers();
+    await updateModuleNumbers();
 }
 
-const moduleDeleted = changedUri => {
+/**
+ * Responds to a deletion in the modules directory
+ * @param {vscode.Uri} changedUri 
+ * @returns 
+ */
+const moduleDeleted = async changedUri => {
+    if (restructuringModules) return;
     let changedModuleName = changedUri.path.substring(changedUri.path.lastIndexOf('/') + 1);
     let moduleNumber = Number.parseInt(changedModuleName.substring(0, 3));
     
@@ -109,23 +170,46 @@ const moduleDeleted = changedUri => {
     removeModuleFromMap(changedModuleName);
     console.log("Removed module from map");
 
-    if (!restructureNeeded(moduleNumber + 1)) return;
+    if (!restructureNeeded(moduleNumber - 1)) return;
 
-    updateModuleNumbers();
+    await updateModuleNumbers();
 }
 
+/**
+ * Adds a module with the given file system name to the module map alongside its topic count
+ * @param {string} module 
+ */
 const addModuleToMap = async module => {
     let mapName = convertToMapModuleName(module);
     moduleMap[mapName] = await getTopicCountInModule(module);
     moduleCount++;
 }
 
+/**
+ * Removes a module with the given name from the module map
+ * @param {string} module 
+ */
 const removeModuleFromMap = module => {
     let mapName = convertToMapModuleName(module);
-    moduleMap[mapName] = undefined;
+    delete moduleMap[mapName];
     moduleCount--;
 }
 
+/**
+ * Clears the module map. Important to not set module map to a blank object since it is exported
+ */
+const clearModuleMap = () => {
+    for (let key in moduleMap) {
+        delete moduleMap[key];
+    }
+    moduleCount = 0;
+}
+
+/**
+ * Checks to see if the change of a module will require the module list to be recounted
+ * @param {number} moduleNumber 
+ * @returns {boolean}
+ */
 const restructureNeeded = moduleNumber => {
     return !(!moduleNumber || moduleNumber == moduleCount);
 }
@@ -342,10 +426,10 @@ const smartCapitalize = (word, context) => {
     if (context.length == 0) return capitalize(word);
     if (context[context.length - 1] == ':') return capitalize(word);
     
-    word = word.toLowerCase();
+    let lowercaseCheck = word.toLowerCase();
 
     let lowercaseWords = styles.titleCapitalization;
-    let shouldCapitalize = lowercaseWords.reduce((currentDecision, nextWord) => currentDecision && word !== nextWord, true);
+    let shouldCapitalize = lowercaseWords.reduce((currentDecision, nextWord) => currentDecision && lowercaseCheck !== nextWord, true);
 
     if (shouldCapitalize) word = capitalize(word);
 
@@ -359,13 +443,15 @@ const smartCapitalize = (word, context) => {
  */
 const capitalize = word => {
     if (word.length == 0) return '';
+    // Handle all-caps abbreviations properly
+    if (word === word.toUpperCase()) return word;
     return word[0].toUpperCase() + word.substring(1).toLowerCase();
 }
 
 /**
  * Builds the module map on extension activation
  */
-const setInitialModuleMap = async () => {
+const buildModuleMap = async () => {
     // Modules are stored without their number prefix to ensure no duplicate named modules when looking up
 	let allModules = await getAllModuleNames();
 	for (let module of allModules) {
@@ -394,8 +480,9 @@ const getTopicCountInModule = async (moduleName) => {
 const ensureModuleOrTopicNumber = (name, number) => {
 
     if (startsWithNumber(name)) {
-        let paddedNum = name.substring(0, name.indexOf('-')).padStart(3, '0');
-        return paddedNum + name.substring(name.indexOf('-'));
+        let startIndex = Math.max(0, name.indexOf('-'));
+        let paddedNum = name.substring(0, startIndex).padStart(3, '0');
+        return paddedNum + name.substring(startIndex);
     }
     return number.toString().padStart(3, '0') + '-' + name;
 }
@@ -442,11 +529,12 @@ module.exports = {
     sayError,
     askChoice,
     askQuestion,
-    setInitialModuleMap,
+    setInitialModuleMap: buildModuleMap,
     createModule,
     convertToMapModuleName,
     getAllModuleNames,
     createTopic,
+    updateTopicNumbers,
     updateModuleNumbers,
     moduleChanged,
     moduleAdded,

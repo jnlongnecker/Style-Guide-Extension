@@ -1,17 +1,24 @@
 const vscode = require('vscode');
 const util = require('./util.js');
 
-let fsWatcher;
+let moduleWatcher;
+let topicWatcher;
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 async function activate(context) {
 
-	fsWatcher = vscode.workspace.createFileSystemWatcher('**/modules/*');
-	fsWatcher.onDidChange(uri => util.moduleChanged(uri));
-	fsWatcher.onDidCreate(uri => util.moduleAdded(uri));
-	fsWatcher.onDidDelete(uri => util.moduleDeleted(uri));
+	moduleWatcher = vscode.workspace.createFileSystemWatcher('**/modules/*');
+	moduleWatcher.onDidChange(uri => util.moduleChanged(uri));
+	moduleWatcher.onDidCreate(uri => util.moduleAdded(uri));
+	moduleWatcher.onDidDelete(uri => util.moduleDeleted(uri));
+
+	topicWatcher = vscode.workspace.createFileSystemWatcher('**/modules/*/*')
+	topicWatcher.onDidChange(uri => util.updateTopicNumbers(uri));
+	topicWatcher.onDidCreate(uri => util.updateTopicNumbers(uri));
+	topicWatcher.onDidDelete(uri => util.updateTopicNumbers(uri));
+
 	await util.setInitialModuleMap();
 	console.log('Revature style guide enabled.');
 
@@ -61,7 +68,7 @@ async function activate(context) {
 }
 
 function deactivate() {
-	fsWatcher.dispose();
+	moduleWatcher.dispose();
 }
 
 /**

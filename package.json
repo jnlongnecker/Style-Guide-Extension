@@ -10,16 +10,105 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:revature-style-guide.helloWorld",
-		"onLanguage:markdown"
+        "onCommand:revature-style-guide.createTopic"
 	],
 	"main": "./extension.js",
 	"contributes": {
-		"commands": [{
-            "command": "revature-style-guide.helloWorld",
-            "title": "Create Module"
-
-		}]
+		"commands": [
+			{
+            	"command": "revature-style-guide.createTopic",
+            	"title": "Style: Create Topic"
+			},
+			{
+				"command": "revature-style-guide.createModule",
+				"title": "Style: Create Module"
+			}
+		],
+		"configuration":[
+			{
+				"title": "Style Guide Rules",
+				"properties": {
+					"contextHooks.information": {
+						"markdownDescription": "Rules define how the Style Guide works. For any rules that contain syntax such as `{!someWord}` denote a context hook, which is some context-aware information that is being injected into the rule. Here is a list of all context hooks that can be used:\n\n|Syntax|Meaning|\n| --- | --- |\n|`{!topicName}`|The name of the current topic in human-readable form (no '-')|\n|`{!moduleName}`|The name of the current module in human-readable form|\n|`{!prerequisitesPreamble}`|The configurable preamble for the Prerequisites section|\n|`{!objectivesPreamble}`|The configurable preamble for the Learning Objectives section|\n|`{!001Content}`|The text from the Prerequisites and Learning Objectives file|\n|`{!002Content}`|The text from the Description file|\n|`{!003Content}`|The text from the Real-World Application file|\n|`{!004Content}`|The text from the Implementation file|\n|`{!005Content}`|The text from the Summary file|",
+						"type": "null",
+						"order": 1
+					},
+					"contextHooks.fileContent": {
+						"type": "boolean",
+						"markdownDescription": "Include the file heading in the context hook for file content?",
+						"default": false,
+						"order": 2
+					},
+					"rules.preambles.prerequisitesPreamble": {
+						"type": "string",
+						"default": "Before going through this topic, the learner should have completed/understand the following:",
+						"description": "The text that appears between ## Prerequisites and the start of the bullet points.",
+						"order": 10
+					},
+					"rules.preambles.learningObjectivesPreamble": {
+						"type": "string",
+						"default": "At the end of the topic, the learner should be able to do the following:",
+						"description": "The text that appears between ## Learning Objectives and the start of the bullet points.",
+						"order": 11
+					},
+					"rules.files.001PrerequisitesAndLearningObjectives": {
+						"type": "string",
+						"editPresentation": "multilineText",
+						"default": "# {!topicName}: Prerequisites and Learning Objectives\n\n## Prerequisites\n\n{!prerequisitesPreamble}\n\n-\n\n## Learning Objectives\n\n{!objectivesPreamble}\n\n-",
+						"description": "The text that should appear in the Prerequisites and Learning Objectives file when a new topic is created."
+					},
+					"rules.files.002Description": {
+						"type": "string",
+						"editPresentation": "multilineText",
+						"default": "# {!topicName}: Description\n\n## What is It/What Does it Do?\n\n## How Does it Work/How Do I Use It?\n\n## Why Does it Matter/Why is it Important?",
+						"description": "The text that should appear in the Description file when a new topic is created."
+					},
+					"rules.files.003Real-WorldApplication": {
+						"type": "string",
+						"editPresentation": "multilineText",
+						"default": "# {!topicName}: Real-World Application",
+						"description": "The text that should appear in the Real-World Application file when a new topic is created."
+					},
+					"rules.files.004Implementation": {
+						"type": "string",
+						"editPresentation": "multilineText",
+						"default": "# {!topicName}: Implementation\n\n## Exercises",
+						"description": "The text that should appear in the Implementation file when a new topic is created."
+					},
+					"rules.files.005Summary": {
+						"type": "string",
+						"editPresentation": "multilineText",
+						"default": "# {!topicName}: Summary\n\n-",
+						"description": "The text that should appear in the Summary file when a new topic is created."
+					},
+					"rules.files.cumulative": {
+						"type": "string",
+						"editPresentation": "multilineText",
+						"default": "# Cumulative for {!topicName}\n\n<details><summary>Prerequisites and Learning Objectives</summary>\n\n{!001Content}\n\n</details>\n\n<details><summary>Description</summary>\n\n{!002Content}\n\n</details>\n\n<details><summary>Real-World Application</summary>\n\n{!003Content}\n\n</details>\n\n<details><summary>Implementation</summary>\n\n{!004Content}\n\n</details>\n\n<details><summary>Summary</summary>\n\n{!005Content}\n\n</details>\n\n<details><summary>Practice Questions</summary>\n\n[Practice Questions](./Quiz.gift)\n\n</details>"
+					},
+					"rules.files.quiz": {
+						"type": "string",
+						"editPresentation": "multilineText",
+						"default": "// Quiz for {!moduleName} {!topicName}"
+					},
+					"rules.style.useTitleCapitalization": {
+						"type": "boolean",
+						"default": true,
+						"markdownDescription": "Use title capitalization rules for topic names, module names, and headings? Title capitalization will capitalize all words in a title except the ones listed below.",
+						"order": 20
+					},
+					"rules.style.titleCapitalization": {
+						"type": "array",
+						"items": {
+							"type":"string"
+						},
+						"default": ["a", "an", "and", "as", "at", "but", "by", "for", "from", "if", "in", "of", "on", "or", "so", "to", "the"],
+						"description": "The following words will not be capitalized unless they begin or end the title.",
+						"order": 21
+					}
+				}
+			}
+		]
 	},
 	"scripts": {
 		"lint": "eslint .",

@@ -1,18 +1,21 @@
 const vscode = require('vscode');
 const util = require('./util.js');
 
+let fsWatcher;
+
 /**
  * @param {vscode.ExtensionContext} context
  */
 async function activate(context) {
 
+	fsWatcher = vscode.workspace.createFileSystemWatcher('**/modules/*');
+	fsWatcher.onDidChange(uri => util.moduleChanged(uri));
+	fsWatcher.onDidCreate(uri => util.moduleAdded(uri));
+	fsWatcher.onDidDelete(uri => util.moduleDeleted(uri));
 	await util.setInitialModuleMap();
 	console.log('Revature style guide enabled.');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with  registerCommand
-	// The commandId parameter must match the command field in package.json
-	let addTopicCmd = vscode.commands.registerCommand('revature-style-guide.helloWorld', async function () {
+	let addTopicCmd = vscode.commands.registerCommand('revature-style-guide.createTopic', async function () {
 
 		let allModules = mapKeysToArray(util.moduleMap);
 		allModules.push('+ Create New Module');
@@ -21,18 +24,45 @@ async function activate(context) {
 		if (moduleName === '+ Create New Module') {
 			moduleName = await util.askQuestion('New Module Name?');
 		}
+		if (moduleName === undefined) return;
 
 		let numberOfTopics = Number.parseInt(await util.askQuestion("How many topics do you want to create?"));
+		if (isNaN(numberOfTopics) || numberOfTopics <= 0) return;
+		
+		let successes = 0;
 		for (let i = 0; i < numberOfTopics; i++) {
-			await addTopic(moduleName);
+			let result = await addTopic(moduleName);
+			if (result === undefined) return;
+			successes += result ? 1 : 0;
 		}
+
+		let failures = numberOfTopics - successes;
+		util.say(`Successfully created ${successes} topic${successes == 1 ? '': 's'} with ${failures} failure${failures == 1 ? '': 's'}.`);
+	});
+
+	let addModuleCmd = vscode.commands.registerCommand('revature-style-guide.createModule', async function () {
+		let moduleName = await util.askQuestion('New Module Name?');
+		if (moduleName === undefined) return;
+
+		moduleName = util.convertHumanReadableToName(
+			util.titleCapitalize(util.convertNameToHumanReadable(moduleName)));
+		let success = await util.createModule(moduleName);
+		if (success) {
+			util.say('Module created successfully.');
+		}
+		else {
+			util.sayError('Error: Module was not created because it already exists.');
+		}
+
 	});
 
 	context.subscriptions.push(addTopicCmd);
+	context.subscriptions.push(addModuleCmd);
 }
 
-// this method is called when your extension is deactivated
-function deactivate() {}
+function deactivate() {
+	fsWatcher.dispose();
+}
 
 /**
  * @param {string} moduleName 
@@ -40,6 +70,7 @@ function deactivate() {}
  */
 async function addTopic(moduleName) {
 	let topicName = await util.askQuestion("Topic Name?");
+	if (topicName === undefined) return;
 	return util.createTopic(moduleName, topicName);
 }
 

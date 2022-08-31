@@ -1,4 +1,3 @@
-const { start } = require('repl');
 const vscode = require('vscode');
 const fs = vscode.workspace.fs;
 const root = vscode.workspace.workspaceFolders[0].uri.path;

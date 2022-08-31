@@ -22,6 +22,10 @@
 			{
 				"command": "revature-style-guide.createModule",
 				"title": "Style: Create Module"
+			},
+			{
+				"command": "revature-style-guide.updateProject",
+				"title": "Style: Adhere Project to Style Guide"
 			}
 		],
 		"configuration":[

@@ -82,8 +82,11 @@ async function activate(context) {
 
 	});
 
+	let updateProject = vscode.commands.registerCommand('revature-style-guide.updateProject', util.adhereProjectToStyleGuide);
+
 	context.subscriptions.push(addTopicCmd);
 	context.subscriptions.push(addModuleCmd);
+	context.subscriptions.push(updateProject);
 }
 
 // Dispose the file watchers when extension is deactivated

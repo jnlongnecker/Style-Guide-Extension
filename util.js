@@ -520,6 +520,28 @@ const getModuleNumber = module => {
     return -1;
 }
 
+const adhereProjectToStyleGuide = async () => {
+    await updateModuleNumbers();
+    let allModules = await getAllModuleNames();
+    for (let module of allModules) {
+        fixModule(module);
+    }
+}
+
+const fixModule = async moduleName => {
+    context.moduleName = cleanTopicOrModuleName(moduleName);
+    let modulePath = root + '\\modules\\' + moduleName;
+    await updateTopicNumbers(vscode.Uri.file(modulePath + '\\throwaway'));
+    
+    let topics = await fs.readDirectory(vscode.Uri.file(modulePath));
+    for (let topic of topics) {
+        fixTopic(topic[0]);
+    }
+}
+
+const fixTopic = async topicName => {
+    context.topicName = cleanTopicOrModuleName(topicName);
+}
 
 module.exports = {
     moduleMap,
@@ -540,5 +562,6 @@ module.exports = {
     moduleDeleted,
     convertHumanReadableToName,
     convertNameToHumanReadable,
-    titleCapitalize
+    titleCapitalize,
+    adhereProjectToStyleGuide
 };

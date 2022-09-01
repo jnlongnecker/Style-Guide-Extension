@@ -68,13 +68,13 @@ This extension contributes the following settings:
 
 ## Installation
 
-This extension is not available publicly on the extension marketplace. In order to start using this yourself, download the `.vsix` file in the releases section and run the following command from the directory with the `.vsix` file:
+This extension is not available publicly on the extension marketplace. In order to start using this yourself, download the `.vsix` file in the releases section and run the following command from VS Code:
 
 ```bash
 code --install-extension revature-style-guide-x.x.x.vsix
 ```
 
-Replace the "x"s with the version number for the `.vsix` file you downloaded.
+Replace the "x"s with the version number for the `.vsix` file you downloaded, and make sure that you are in the same directory as the file.
 
 ## Known Issues
 

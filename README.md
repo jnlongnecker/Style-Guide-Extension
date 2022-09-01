@@ -1,65 +1,86 @@
-# revature-style-guide README
+# Style Guide Assistant
 
-This is the README for your extension "revature-style-guide". After writing up a brief description, we recommend including the following sections.
+This extension serves to aid in the adherence to the style guide for NextGen content. I plan to update this extension over time to provide more quality-of-life features, so stay tuned and be sure to install updates as they come out!
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### Adding Modules
 
-For example if there is an image subfolder under your extension project workspace:
+Using the command palette, you can easily add in new modules to the project. The benefit of using the command palette is that the `Style Guide Assistant` will take care of those pesky details like the module number and making sure it matches the `kebab-case` file format. You can worry about the important stuff, like what the module should be called!
 
-\!\[feature X\]\(images/feature-x.png\)
+### Adding Topics
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+All modules have to have some topics, so you can easily use the command palette to insert new topics. You can choose an existing module from the list, or you can decide to create you own module in case your topic doesn't fit in an existing module. Once again, all the pesky things like proper casing and numbering will be taken care of for you. Not only will the topic name be properly formatted, but the required files for a topic will be automatically created with the templates for each file!
 
-## Requirements
+### Automatic Number Adjustment
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+If you want to move the order of modules or topics around, it can be tedious to change the numbers of a bunch of other topics or modules as well. Instead, the `Style Guide Assistant` will automatically track any changes done to the order and update all the other topic or module numbers with the proper number to ensure the proper numerical order! This takes place whether you add a new module or topic using the command palette or in some other way manually.
+
+### Project and Module Rebuild
+
+Have an existing project that hasn't had the benefit of all these awesome features and want to bring it up to speed? Never fear, with a single command palette command, the `Style Guide Assistant` will automatically dig through your project and do this stuff for you:
+
+- Fix topic and module names to fit convention
+- Populate empty `001-005.md` files with the template
+- Create `001-005.md` files and `Quiz.gift` file with the template
+- Create the properly formatted `Cumulative.md` file for topics with populated `001-005.md` files
+
+### Automatic Completion of Cumulative.md
+
+Copy-pasting your code from the `001-005.md` files is tedious and time consuming. The `Style Guide Assistant` will do all that for you! Now, every time you save a `001-005.md` file, the associated `Cumulative.md` file will get automatically updated with the changes!
+
+### Context Hooks
+
+Use provided context hooks to fully customize the content that you want to appear by default in the `001-005.md` files. Here is a list of all the context hooks and what they represent:
+
+|Syntax                    |Meaning                                                      |
+| ------------------------ | ----------------------------------------------------------- |
+|`{!topicName}`            |The name of the current topic in human-readable form (no '-')|
+|`{!moduleName}`           |The name of the current module in human-readable form        |
+|`{!prerequisitesPreamble}`|The configurable preamble for the Prerequisites section      |
+|`{!objectivesPreamble}`   |The configurable preamble for the Learning Objectives section|
+|`{!001Content}`           |The text from the Prerequisites and Learning Objectives file |
+|`{!002Content}`           |The text from the Description file                           |
+|`{!003Content}`           |The text from the Real-World Application file                |
+|`{!004Content}`           |The text from the Implementation file                        |
+|`{!005Content}`           |The text from the Summary file                               |
+						
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
+The `Style Guide Assistant` is heavily customizable for your needs. You are able to configure everything from the default content for the `001-005.md` files to whether or not you want to use capitalization rules for titles!
 
 This extension contributes the following settings:
 
-* `myExtension.enable`: enable/disable this extension
-* `myExtension.thing`: set to `blah` to do something
+- `contextHooks.information`: Used to provide information to you about context hooks. Doesn't do anything.
+- `contextHooks.fileContent`: Set to `true` to use the heading of `001-005.md` files in the `Cumulative.md` file.
+- `rules.preambles.prerequisitesPreamble`: Used to configure the preamble that appears after the `Prerequisites` heading
+- `rules.preambles.learningObjectivesPreamble`: Used to configure the preamble that appears after the `Learning Objectives` heading
+- `rules.files.001PrerequisitesAndLearningObjectives`: Used to configure default text that appears in `001-Prerequisites-And-Learning-Objectives.md`.
+- `rules.files.002Description`: Used to configure default text that appears in `002-Description.md`.
+- `rules.files.003Real-WorldApplication`: Used to configure default text that appears in `003-Real-World-Application.md`.
+- `rules.files.004Implementation`: Used to configure default text that appears in `004-Implementation.md`.
+- `rules.files.005Summary`: Used to configure default text that appears in `005-Summary.md`.
+- `rules.files.cumulative`: Used to configure template that the `Cumulative.md` file uses.
+- `rules.files.quiz`: Used to configure default text that appears in `Quiz.gift`.
+- `rules.style.useTitleCapitalization`: Set to `true` to use the title capitalization rules with the specified words that should always be lowercase.
+- `rules.style.titleCapitalization`: An `array` of `strings` to specify words that should be lowercase in titles.
+
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+None yet, but there are bound to be some eventually.
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
+Alpha release of initial features.
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
------------------------------------------------------------------------------------------------------------
-
-## Working with Markdown
-
-**Note:** You can author your README using Visual Studio Code.  Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux)
-* Toggle preview (`Shift+CMD+V` on macOS or `Shift+Ctrl+V` on Windows and Linux)
-* Press `Ctrl+Space` (Windows, Linux) or `Cmd+Space` (macOS) to see a list of Markdown snippets
-
-### For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- File system topic and module number tracker
+- Command palette command to add a topic
+- Command palette command to add a module
+- Command palette command to rebuild a module
+- Command palette command to rebuild the entire project
+- Automatic `Cumulative.md` updating
+- Automatic topic and module name title capitalization

@@ -524,7 +524,10 @@ const applyContextHooks = text => {
     text = text.replaceAll('{!topicName}', context.topicName);
     text = text.replaceAll('{!moduleName}', context.moduleName);
 
-    const applyHeadingRule = (content) => useFileHeading ? content.trim() : content.substring(content.indexOf('\n')).trim();
+    const applyHeadingRule = (content) => {
+        if (content === undefined) content = 'None.';
+        return useFileHeading ? content.trim() : content.substring(content.indexOf('\n')).trim();
+    }
     text = text.replaceAll('{!001Content}', applyHeadingRule(context.content001));
     text = text.replaceAll('{!002Content}', applyHeadingRule(context.content002));
     text = text.replaceAll('{!003Content}', applyHeadingRule(context.content003));
@@ -535,8 +538,7 @@ const applyContextHooks = text => {
 
 /**
  * Populates the context object with the appropriate file content. 
- * Requires the context for the current topic and module to be populated
- * @returns {Promise<undefined>}
+ * Requires the context for the current topic and module to be populated.
  */
 const populateFileContext = async () => {
     if (!context.fsModuleName || !context.fsTopicName) return;
@@ -550,19 +552,21 @@ const populateFileContext = async () => {
     filesToOpen.push(fs.readFile(vscode.Uri.file(dir + '004-Implementation.md')));
     filesToOpen.push(fs.readFile(vscode.Uri.file(dir + '005-Summary.md')));
 
-    let byteArrays;
-    try {
-        byteArrays = await Promise.all(filesToOpen);
-    }
-    catch(exception) {
-        return;
-    }
+    return Promise.allSettled(filesToOpen).then(resultArray => {
+        let mappingFunction = (item) => {
 
-    context.content001 = byteArrays[0].toString();
-    context.content002 = byteArrays[1].toString();
-    context.content003 = byteArrays[2].toString();
-    context.content004 = byteArrays[3].toString();
-    context.content005 = byteArrays[4].toString();
+            // Undefined is used to denote a file does not exist
+            if (item.status == 'rejected') return undefined;
+            return item.value.toString();
+        }
+        let contentArray = resultArray.map(item => mappingFunction(item));
+        context.content001 = contentArray[0];
+        context.content002 = contentArray[1];
+        context.content003 = contentArray[2];
+        context.content004 = contentArray[3];
+        context.content005 = contentArray[4];
+    });
+
 }
 
 /**
@@ -616,14 +620,29 @@ const fixTopic = async topicName => {
     await populateFileContext();
 
     let topicPath = root + '\\modules\\' + context.fsModuleName + '\\' + context.fsTopicName;
-    if (!context.content001) createFile001(topicPath);
-    if (!context.content002) createFile002(topicPath);
-    if (!context.content003) createFile003(topicPath);
-    if (!context.content004) createFile004(topicPath);
-    if (!context.content005) createFile005(topicPath);
 
-    let allFilesPopulated = context.content001 && context.content002 && context.content003 && context.content004 && context.content005;
+    // Empty string file content means that the file is created, but empty
+    if (context.content001 === '') createFile001(topicPath);
+    if (context.content002 === '') createFile002(topicPath);
+    if (context.content003 === '') createFile003(topicPath);
+    if (context.content004 === '') createFile004(topicPath);
+    if (context.content005 === '') createFile005(topicPath);
+
+    let allFilesPopulated = context.content001 !== '' && 
+                            context.content002 !== '' && 
+                            context.content003 !== '' && 
+                            context.content004 !== '' && 
+                            context.content005 !== '';
+
+    // File content that is undefined means the file does not exist
+    let noFilesCreated =    context.content001 === undefined && 
+                            context.content002 === undefined && 
+                            context.content003 === undefined && 
+                            context.content004 === undefined && 
+                            context.content005 === undefined;
+
     if (allFilesPopulated) createCumulative(topicPath);
+    if (noFilesCreated) populateFiles(topicPath);
 }
 
 /**

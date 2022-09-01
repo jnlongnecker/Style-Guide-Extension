@@ -85,7 +85,9 @@ async function activate(context) {
 		let moduleList = mapKeysToArray(util.moduleMap);
 		let moduleName = await util.askChoice('Adhere which module?', moduleList);
 
-		util.adhereModule(moduleName);
+		await util.adhereModule(moduleName);
+
+		await util.say(`${moduleName} updated to fit the style guide.`);
 	})
 
 	let updateProject = vscode.commands.registerCommand('revature-style-guide.updateProject', util.adhereProjectToStyleGuide);

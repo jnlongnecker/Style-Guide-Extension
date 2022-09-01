@@ -10,7 +10,8 @@
 		"Other"
 	],
 	"activationEvents": [
-        "onCommand:revature-style-guide.createTopic"
+        "onCommand:revature-style-guide.createTopic",
+		"onLanguage:markdown"
 	],
 	"main": "./extension.js",
 	"contributes": {
@@ -26,6 +27,10 @@
 			{
 				"command": "revature-style-guide.updateProject",
 				"title": "Style: Adhere Project to Style Guide"
+			},
+			{
+				"command": "revature-style-guide.updateModule",
+				"title": "Style: Adhere Module to Style Guide"
 			}
 		],
 		"configuration":[
@@ -70,7 +75,7 @@
 					"rules.files.003Real-WorldApplication": {
 						"type": "string",
 						"editPresentation": "multilineText",
-						"default": "# {!topicName}: Real-World Application",
+						"default": "# {!topicName}: Real-World Application\n",
 						"description": "The text that should appear in the Real-World Application file when a new topic is created."
 					},
 					"rules.files.004Implementation": {

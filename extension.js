@@ -23,7 +23,6 @@ async function activate(context) {
 
 	// Build the map of modules
 	await util.setInitialModuleMap();
-	console.log('Revature style guide enabled.');
 
 	/**
 	 * Command Palette command to create a topic
@@ -82,11 +81,28 @@ async function activate(context) {
 
 	});
 
+	let updateModule = vscode.commands.registerCommand('revature-style-guide.updateModule', async () => {
+		let moduleList = mapKeysToArray(util.moduleMap);
+		let moduleName = await util.askChoice('Adhere which module?', moduleList);
+
+		util.adhereModule(moduleName);
+	})
+
 	let updateProject = vscode.commands.registerCommand('revature-style-guide.updateProject', util.adhereProjectToStyleGuide);
+
+	vscode.workspace.onDidSaveTextDocument(document => {
+		let contentFileRegex = /[0-9]{3}-[^\\]*\.md$/;
+		if (!contentFileRegex.test(document.fileName)) return;
+
+		util.updateCumulative(document.fileName);
+	})
 
 	context.subscriptions.push(addTopicCmd);
 	context.subscriptions.push(addModuleCmd);
 	context.subscriptions.push(updateProject);
+	context.subscriptions.push(updateModule);
+	
+	console.log('Revature style guide enabled.');
 }
 
 // Dispose the file watchers when extension is deactivated

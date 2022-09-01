@@ -9,12 +9,17 @@ let preambles = rules.get('preambles');
 let fileContents = rules.get('files');
 let styles = rules.get('style');
 
+let useFileHeading = vscode.workspace.getConfiguration('contextHooks').get('fileContent');
+let capitalizeTitles = styles.useTitleCapitalization;
+
 let restructuringModules = false;
 let restructuringTopics = false;
 
 let context = {
     topicName: '',
     moduleName: '',
+    fsTopicName: '',
+    fsModuleName: '',
     content001: '',
     content002: '',
     content003: '',
@@ -103,6 +108,10 @@ const updateModuleNumbers = async () => {
     restructuringModules = false;
 }
 
+/**
+ * Enforces proper numerical order for a module or topic directory
+ * @param {vscode.Uri} directoryUri 
+ */
 const updateNumbersInDirectory = async (directoryUri) => {
     let files = await fs.readDirectory(directoryUri);
     let count = 0;
@@ -288,7 +297,7 @@ const populateFiles = async (topicPath) => {
 const createFile001 = async (topicPath) => {
     let rawContent = applyContextHooks(fileContents['001PrerequisitesAndLearningObjectives']);
     let content = Buffer.from(rawContent, 'utf8');
-    await fs.writeFile(vscode.Uri.file(topicPath + '\\001-Prerequisites-and-Learning-Objectives.md'), Uint8Array.from(content));
+    await fs.writeFile(vscode.Uri.file(topicPath + '\\001-Prerequisites-And-Learning-Objectives.md'), Uint8Array.from(content));
 }
 
 /**
@@ -342,6 +351,16 @@ const createQuiz = async (topicPath) => {
 }
 
 /**
+ * Creates the Cumulative file at the specified topic path
+ * @param {string} topicPath 
+ */
+const createCumulative = async (topicPath) => {
+    let rawContent = applyContextHooks(fileContents['cumulative']);
+    let content = Buffer.from(rawContent, 'utf8');
+    await fs.writeFile(vscode.Uri.file(topicPath + '\\Cumulative.md'), Uint8Array.from(content));
+}
+
+/**
  * Creates a module with the specified name if it doesn't exist already
  * @param {string} moduleName 
  * @returns {Promise<boolean>}
@@ -382,7 +401,7 @@ const convertHumanReadableToName = moduleOrTopicName => {
  */
 const cleanTopicOrModuleName = name => {
     let newName = titleCapitalize(convertNameToHumanReadable(name));
-    if (startsWithNumber(newName)) newName = removeNumberPrefix(name);
+    if (startsWithNumber(newName)) newName = removeNumberPrefix(newName);
     return newName;
 }
 
@@ -404,6 +423,7 @@ const removeNumberPrefix = name => {
  * @returns {string}
  */
 const titleCapitalize = (phrase) => {
+    if (!capitalizeTitles) return;
     phrase.trim();
     let allWords = phrase.split(' ');
     if (allWords.length == 1) return capitalize(allWords[0]);
@@ -503,7 +523,46 @@ const applyContextHooks = text => {
     text = text.replaceAll('{!objectivesPreamble}', preambles.learningObjectivesPreamble);
     text = text.replaceAll('{!topicName}', context.topicName);
     text = text.replaceAll('{!moduleName}', context.moduleName);
+
+    const applyHeadingRule = (content) => useFileHeading ? content.trim() : content.substring(content.indexOf('\n')).trim();
+    text = text.replaceAll('{!001Content}', applyHeadingRule(context.content001));
+    text = text.replaceAll('{!002Content}', applyHeadingRule(context.content002));
+    text = text.replaceAll('{!003Content}', applyHeadingRule(context.content003));
+    text = text.replaceAll('{!004Content}', applyHeadingRule(context.content004));
+    text = text.replaceAll('{!005Content}', applyHeadingRule(context.content005));
     return text;
+}
+
+/**
+ * Populates the context object with the appropriate file content. 
+ * Requires the context for the current topic and module to be populated
+ * @returns {Promise<undefined>}
+ */
+const populateFileContext = async () => {
+    if (!context.fsModuleName || !context.fsTopicName) return;
+
+    let dir = root + '\\modules\\' + context.fsModuleName + '\\' + context.fsTopicName + '\\';
+    let filesToOpen = [];
+
+    filesToOpen.push(fs.readFile(vscode.Uri.file(dir + '001-Prerequisites-And-Learning-Objectives.md')));
+    filesToOpen.push(fs.readFile(vscode.Uri.file(dir + '002-Description.md')));
+    filesToOpen.push(fs.readFile(vscode.Uri.file(dir + '003-Real-World-Application.md')));
+    filesToOpen.push(fs.readFile(vscode.Uri.file(dir + '004-Implementation.md')));
+    filesToOpen.push(fs.readFile(vscode.Uri.file(dir + '005-Summary.md')));
+
+    let byteArrays;
+    try {
+        byteArrays = await Promise.all(filesToOpen);
+    }
+    catch(exception) {
+        return;
+    }
+
+    context.content001 = byteArrays[0].toString();
+    context.content002 = byteArrays[1].toString();
+    context.content003 = byteArrays[2].toString();
+    context.content004 = byteArrays[3].toString();
+    context.content005 = byteArrays[4].toString();
 }
 
 /**
@@ -520,27 +579,77 @@ const getModuleNumber = module => {
     return -1;
 }
 
+/**
+ * Ensures all modules in the project match the style guide
+ */
 const adhereProjectToStyleGuide = async () => {
     await updateModuleNumbers();
     let allModules = await getAllModuleNames();
     for (let module of allModules) {
-        fixModule(module);
+        await fixModule(module);
     }
 }
 
+/**
+ * Fixes a module and all its contents to properly match the style guide
+ * @param {string} moduleName 
+ */
 const fixModule = async moduleName => {
     context.moduleName = cleanTopicOrModuleName(moduleName);
+    context.fsModuleName = moduleName;
     let modulePath = root + '\\modules\\' + moduleName;
     await updateTopicNumbers(vscode.Uri.file(modulePath + '\\throwaway'));
     
     let topics = await fs.readDirectory(vscode.Uri.file(modulePath));
     for (let topic of topics) {
-        fixTopic(topic[0]);
+        await fixTopic(topic[0]);
     }
 }
 
+/**
+ * Fixes a topic's contents to properly match the style guide
+ * @param {string} topicName 
+ */
 const fixTopic = async topicName => {
     context.topicName = cleanTopicOrModuleName(topicName);
+    context.fsTopicName = topicName;
+    await populateFileContext();
+
+    let topicPath = root + '\\modules\\' + context.fsModuleName + '\\' + context.fsTopicName;
+    if (!context.content001) createFile001(topicPath);
+    if (!context.content002) createFile002(topicPath);
+    if (!context.content003) createFile003(topicPath);
+    if (!context.content004) createFile004(topicPath);
+    if (!context.content005) createFile005(topicPath);
+
+    let allFilesPopulated = context.content001 && context.content002 && context.content003 && context.content004 && context.content005;
+    if (allFilesPopulated) createCumulative(topicPath);
+}
+
+/**
+ * Entry point wrapper for extension to ask a specific module for rebuild
+ * @param {string} moduleName 
+ */
+const adhereModule = async moduleName => {
+    let fsModuleName = ensureModuleOrTopicNumber(convertHumanReadableToName(moduleName), getModuleNumber(moduleName));
+    await fixModule(fsModuleName);
+}
+
+/**
+ * Fired when a 001-005 markdown file is saved to update the cumulative file for that topic
+ * @param {string} updatedFilePath 
+ */
+const updateCumulative = async updatedFilePath => {
+    let reducedPath = updatedFilePath.substring(updatedFilePath.indexOf('modules') + 8);
+    reducedPath = reducedPath.substring(0,Math.max(reducedPath.lastIndexOf('\\'), reducedPath.lastIndexOf('/')));
+    context.fsModuleName = reducedPath.substring(0, Math.max(reducedPath.indexOf('\\'), reducedPath.indexOf('/')));
+    context.fsTopicName = reducedPath.substring(Math.max(reducedPath.indexOf('\\'), reducedPath.indexOf('/')) + 1);
+    context.moduleName = cleanTopicOrModuleName(context.fsModuleName);
+    context.topicName = cleanTopicOrModuleName(context.fsTopicName);
+
+    await populateFileContext();
+
+    await createCumulative(root + '\\modules\\' + context.fsModuleName + '\\' + context.fsTopicName);
 }
 
 module.exports = {
@@ -563,5 +672,7 @@ module.exports = {
     convertHumanReadableToName,
     convertNameToHumanReadable,
     titleCapitalize,
-    adhereProjectToStyleGuide
+    adhereProjectToStyleGuide,
+    adhereModule,
+    updateCumulative
 };

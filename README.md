@@ -69,7 +69,7 @@ This extension contributes the following settings:
 
 ## Known Issues
 
-None yet, but there are bound to be some eventually.
+Using the extension from within a workspace with multiple project folders open is not supported. Make sure to use the extension with just a single project open.
 
 ## Release Notes
 

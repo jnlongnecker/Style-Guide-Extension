@@ -66,6 +66,15 @@ This extension contributes the following settings:
 - `rules.style.useTitleCapitalization`: Set to `true` to use the title capitalization rules with the specified words that should always be lowercase.
 - `rules.style.titleCapitalization`: An `array` of `strings` to specify words that should be lowercase in titles.
 
+## Installation
+
+This extension is not available publicly on the extension marketplace. In order to start using this yourself, download the `.vsix` file in the releases section and run the following command from the directory with the `.vsix` file:
+
+```bash
+code --install-extension revature-style-guide-x.x.x.vsix
+```
+
+Replace the "x"s with the version number for the `.vsix` file you downloaded.
 
 ## Known Issues
 
